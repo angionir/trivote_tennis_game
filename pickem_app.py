@@ -249,22 +249,21 @@ def get_or_create_user(username):
     return result['id']
 
 
-def create_tournament(name, tour, slug, year, lock_dt_utc, created_by):
-    """lock_dt_utc must be a timezone-aware UTC datetime."""
-    result = {}
-
+def create_event(name, slug, year, lock_dt_utc, created_by):
+    """Creates the ATP and WTA tournament rows for this event together in a
+    single commit, so setting up an event only takes one form submission
+    instead of one per tour. lock_dt_utc must be a timezone-aware UTC datetime."""
     def mutate(df):
-        new_id = _next_id(df)
-        result['id'] = new_id
-        new_row = pd.DataFrame([{
-            'id': new_id, 'name': name, 'tour': tour, 'tournament_slug': slug,
+        next_id = _next_id(df)
+        new_rows = [{
+            'id': next_id + i, 'name': name, 'tour': tour, 'tournament_slug': slug,
             'year': year, 'lock_time': lock_dt_utc.isoformat(),
             'created_by': created_by, 'created_at': utc_now().isoformat(),
-        }], columns=TABLE_COLUMNS['tournaments'])
-        return pd.concat([df, new_row], ignore_index=True)
+        } for i, tour in enumerate(["ATP", "WTA"])]
+        new_df = pd.DataFrame(new_rows, columns=TABLE_COLUMNS['tournaments'])
+        return pd.concat([df, new_df], ignore_index=True)
 
-    _update_table('tournaments', mutate, f"Create tournament {name}")
-    return result['id']
+    _update_table('tournaments', mutate, f"Create event {name}")
 
 
 def list_tournaments():
@@ -549,11 +548,7 @@ def tournament_section():
 
     with st.sidebar.expander("+ Create tournament"):
         name = st.text_input("Display name", key="new_t_name", placeholder="e.g. Wimbledon 2026")
-        st.caption(
-            "Use the same display name and year for the ATP and WTA editions of "
-            "the same event to combine them into one leaderboard."
-        )
-        tour = st.selectbox("Tour", ["ATP", "WTA"], key="new_t_tour")
+        st.caption("Creates both the ATP and WTA draws for this event, combined into one leaderboard.")
         slug = st.text_input(
             "Tennis Abstract slug", key="new_t_slug", placeholder="Wimbledon",
             help="e.g. Wimbledon, RolandGarros, AustralianOpen, USOpen, IndianWells, Rome",
@@ -567,7 +562,7 @@ def tournament_section():
                 st.error("Display name and Tennis Abstract slug are required")
             else:
                 lock_dt_utc = datetime.combine(lock_date, lock_time, tzinfo=timezone.utc)
-                create_tournament(name, tour, slug, int(year), lock_dt_utc, st.session_state.user_id)
+                create_event(name, slug, int(year), lock_dt_utc, st.session_state.user_id)
                 st.success("Tournament created")
                 st.rerun()
 
