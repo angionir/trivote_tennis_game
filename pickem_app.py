@@ -252,18 +252,28 @@ def get_or_create_user(username):
 def create_event(name, slug, year, lock_dt_utc, created_by):
     """Creates the ATP and WTA tournament rows for this event together in a
     single commit, so setting up an event only takes one form submission
-    instead of one per tour. lock_dt_utc must be a timezone-aware UTC datetime."""
+    instead of one per tour. lock_dt_utc must be a timezone-aware UTC datetime.
+    No-ops (returns False) if an event with this name+year already exists -
+    guards against double-submitting the form creating duplicate rows."""
+    result = {'created': False}
+
     def mutate(df):
+        if not df.empty:
+            dup = df[(df['name'] == name) & (pd.to_numeric(df['year'], errors='coerce') == year)]
+            if not dup.empty:
+                return df
         next_id = _next_id(df)
         new_rows = [{
             'id': next_id + i, 'name': name, 'tour': tour, 'tournament_slug': slug,
             'year': year, 'lock_time': lock_dt_utc.isoformat(),
             'created_by': created_by, 'created_at': utc_now().isoformat(),
         } for i, tour in enumerate(["ATP", "WTA"])]
+        result['created'] = True
         new_df = pd.DataFrame(new_rows, columns=TABLE_COLUMNS['tournaments'])
         return pd.concat([df, new_df], ignore_index=True)
 
     _update_table('tournaments', mutate, f"Create event {name}")
+    return result['created']
 
 
 def list_tournaments():
@@ -562,9 +572,11 @@ def tournament_section():
                 st.error("Display name and Tennis Abstract slug are required")
             else:
                 lock_dt_utc = datetime.combine(lock_date, lock_time, tzinfo=timezone.utc)
-                create_event(name, slug, int(year), lock_dt_utc, st.session_state.user_id)
-                st.success("Tournament created")
-                st.rerun()
+                if create_event(name, slug, int(year), lock_dt_utc, st.session_state.user_id):
+                    st.success("Tournament created")
+                    st.rerun()
+                else:
+                    st.warning(f"An event named '{name}' ({year}) already exists - select it from the dropdown above.")
 
     return selected_event
 
