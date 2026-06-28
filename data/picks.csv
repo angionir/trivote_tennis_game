@@ -1,0 +1,11 @@
+id,user_id,tournament_id,group_name,slot_index,player_name
+1,1,1,1-2,0,(1)Jannik Sinner (ITA)
+2,1,1,3-4,0,(4)Ben Shelton (USA)
+3,1,1,5-8,0,(5)Alex De Minaur (AUS)
+4,1,1,9-16,0,(13)Jiri Lehecka (CZE)
+5,1,1,9-16,1,(9)Flavio Cobolli (ITA)
+6,1,1,17-32,0,(17)Frances Tiafoe (USA)
+7,1,1,17-32,1,(18)Francisco Cerundolo (ARG)
+8,1,1,17-32,2,(19)Karen Khachanov (RUS)
+9,1,1,Unseeded,0,Adam Walton (AUS)
+10,1,1,Unseeded,1,Adolfo Daniel Vallejo (PAR)
