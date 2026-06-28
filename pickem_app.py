@@ -721,7 +721,6 @@ def render_leaderboard_tab(tournaments, user_id):
         hide_index=True, use_container_width=True,
     )
 
-    tour_by_id = {t['id']: t['tour'] for t in tournaments}
     st.markdown("### Pick details")
     for _, row in leaderboard.iterrows():
         is_self = row['user_id'] == user_id
@@ -729,14 +728,16 @@ def render_leaderboard_tab(tournaments, user_id):
             continue
         with st.expander(f"{row['username']} - {row['points']} pts"):
             user_picks = picks_df[picks_df['user_id'] == row['user_id']].copy()
-            user_picks['Tour'] = user_picks['tournament_id'].map(tour_by_id)
-            user_picks = user_picks[
-                ['Tour', 'group_name', 'player_name', 'round_label', 'status', 'points']
-            ].rename(columns={
-                'group_name': 'Group', 'player_name': 'Player',
-                'round_label': 'Secured Round', 'status': 'Status', 'points': 'Points',
-            }).sort_values(['Tour', 'Group'])
-            st.dataframe(user_picks, hide_index=True, use_container_width=True)
+            tour_tabs = st.tabs([t['tour'] for t in tournaments])
+            for tour_tab, t in zip(tour_tabs, tournaments):
+                with tour_tab:
+                    tour_picks = user_picks[user_picks['tournament_id'] == t['id']][
+                        ['group_name', 'player_name', 'round_label', 'status', 'points']
+                    ].rename(columns={
+                        'group_name': 'Group', 'player_name': 'Player',
+                        'round_label': 'Secured Round', 'status': 'Status', 'points': 'Points',
+                    }).sort_values('Group')
+                    st.dataframe(tour_picks, hide_index=True, use_container_width=True)
 
     if not locked:
         st.caption("Other players' pick breakdowns are hidden until all picks lock.")
