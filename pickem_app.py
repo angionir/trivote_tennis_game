@@ -276,6 +276,31 @@ def create_event(name, slug, year, lock_dt_utc, created_by):
     return result['created']
 
 
+def delete_event(tournament_ids):
+    """Permanently deletes the given tournament rows along with any picks
+    and player_progress rows tied to them (e.g. both the ATP and WTA
+    tournaments of an event, to wipe the whole event in one go)."""
+    tournament_ids = {int(t) for t in tournament_ids}
+
+    def mutate_tournaments(df):
+        mask = pd.to_numeric(df['id'], errors='coerce').isin(tournament_ids)
+        return df[~mask]
+
+    _update_table('tournaments', mutate_tournaments, f"Delete tournaments {sorted(tournament_ids)}")
+
+    def mutate_dependent(df):
+        mask = pd.to_numeric(df['tournament_id'], errors='coerce').isin(tournament_ids)
+        return df[~mask]
+
+    picks_df = _read_table('picks')
+    if not picks_df.empty and pd.to_numeric(picks_df['tournament_id'], errors='coerce').isin(tournament_ids).any():
+        _update_table('picks', mutate_dependent, f"Delete picks for tournaments {sorted(tournament_ids)}")
+
+    progress_df = _read_table('player_progress')
+    if not progress_df.empty and pd.to_numeric(progress_df['tournament_id'], errors='coerce').isin(tournament_ids).any():
+        _update_table('player_progress', mutate_dependent, f"Delete player_progress for tournaments {sorted(tournament_ids)}")
+
+
 def list_tournaments():
     df = _read_table('tournaments')
     if df.empty:
@@ -553,6 +578,30 @@ def tournament_section():
             'year': key[1],
             'tournaments': [get_tournament(tid) for tid in groups[key]],
         }
+
+        confirm_key = f"confirm_delete_{key[0]}_{key[1]}"
+        with st.sidebar.expander("Delete this tournament"):
+            st.warning(
+                f"This permanently deletes \"{selected_event['name']}\" ({selected_event['year']}) "
+                "and every player's picks for it. This cannot be undone."
+            )
+            if not st.session_state.get(confirm_key):
+                if st.button("Delete tournament", key=f"delete_btn_{key[0]}_{key[1]}"):
+                    st.session_state[confirm_key] = True
+                    st.rerun()
+            else:
+                st.error("Are you sure? This cannot be undone.")
+                col_confirm, col_cancel = st.columns(2)
+                with col_confirm:
+                    if st.button("Yes, delete", key=f"confirm_delete_btn_{key[0]}_{key[1]}"):
+                        delete_event([t['id'] for t in selected_event['tournaments']])
+                        st.session_state.pop(confirm_key, None)
+                        st.success("Tournament deleted")
+                        st.rerun()
+                with col_cancel:
+                    if st.button("Cancel", key=f"cancel_delete_btn_{key[0]}_{key[1]}"):
+                        st.session_state.pop(confirm_key, None)
+                        st.rerun()
     else:
         st.sidebar.info("No tournaments yet - create one below.")
 
@@ -628,7 +677,7 @@ def render_picks_tab(tournament, entrants_df, user_id):
                 all_chosen.add(pick)
         selections[group_name] = chosen_for_group
 
-    if not locked and st.button("Save picks"):
+    if not locked and st.button("Save picks", key=f"save_picks_{tournament['id']}"):
         total_slots = sum(n for _, n in GROUPS_CONFIG)
         total_selected = sum(len(v) for v in selections.values())
         if total_selected < total_slots:
