@@ -441,35 +441,44 @@ def auto_sync(tournament_id):
     return ok, msg, utc_now()
 
 
-def get_leaderboard(tournament_id):
-    picks_df = get_all_picks(tournament_id)
-    if picks_df.empty:
-        return pd.DataFrame(columns=['user_id', 'username', 'points']), picks_df
+def get_leaderboard(tournament_ids):
+    """tournament_ids: iterable of tournament ids to pool together (e.g. the
+    ATP and WTA tournaments of the same event), so one player's total is
+    their points summed across every tour they picked for that event."""
+    all_picks = []
+    for tournament_id in tournament_ids:
+        picks_df = get_all_picks(tournament_id)
+        if picks_df.empty:
+            continue
 
-    progress_df = get_player_progress(tournament_id)
-    secured_map = dict(zip(progress_df['player_name'], progress_df['secured_round']))
-    elim_map = dict(zip(progress_df['player_name'], progress_df['eliminated']))
+        progress_df = get_player_progress(tournament_id)
+        secured_map = dict(zip(progress_df['player_name'], progress_df['secured_round']))
+        elim_map = dict(zip(progress_df['player_name'], progress_df['eliminated']))
 
-    def points_for(player_name):
-        secured_idx = secured_map.get(player_name, -1)
-        return sum(ROUND_POINTS[r] for r in ROUND_ORDER[:secured_idx + 1])
+        picks_df = picks_df.copy()
+        picks_df['tournament_id'] = tournament_id
+        picks_df['secured_round'] = picks_df['player_name'].map(secured_map).fillna(-1).astype(int)
+        picks_df['round_label'] = picks_df['secured_round'].apply(lambda i: ROUND_ORDER[i] if i >= 0 else '-')
+        picks_df['status'] = picks_df['player_name'].apply(
+            lambda p: 'Eliminated' if elim_map.get(p) else ('Active' if p in secured_map else 'Not started')
+        )
+        picks_df['points'] = picks_df['secured_round'].apply(
+            lambda i: sum(ROUND_POINTS[r] for r in ROUND_ORDER[:i + 1])
+        )
+        all_picks.append(picks_df)
 
-    picks_df = picks_df.copy()
-    picks_df['secured_round'] = picks_df['player_name'].map(secured_map).fillna(-1).astype(int)
-    picks_df['round_label'] = picks_df['secured_round'].apply(lambda i: ROUND_ORDER[i] if i >= 0 else '-')
-    picks_df['status'] = picks_df['player_name'].apply(
-        lambda p: 'Eliminated' if elim_map.get(p) else ('Active' if p in secured_map else 'Not started')
-    )
-    picks_df['points'] = picks_df['player_name'].apply(points_for)
+    if not all_picks:
+        return pd.DataFrame(columns=['user_id', 'username', 'points']), pd.DataFrame()
 
+    combined_picks = pd.concat(all_picks, ignore_index=True)
     leaderboard = (
-        picks_df.groupby(['user_id', 'username'])['points']
+        combined_picks.groupby(['user_id', 'username'])['points']
         .sum()
         .reset_index()
         .sort_values('points', ascending=False)
         .reset_index(drop=True)
     )
-    return leaderboard, picks_df
+    return leaderboard, combined_picks
 
 
 @st.cache_data(ttl=600)
@@ -507,22 +516,43 @@ def login_section():
 
 
 def tournament_section():
+    """Tournaments are grouped into one "event" per (display name, year), so
+    an ATP and a WTA tournament created with the same name/year (e.g. both
+    named "Wimbledon" 2026) share a single combined leaderboard."""
     tournaments = list_tournaments()
     st.sidebar.subheader("Tournament")
 
-    selected_id = None
+    selected_event = None
     if not tournaments.empty:
-        options = {
-            f"{row['name']} ({row['tour']} {row['year']})": int(row['id'])
-            for _, row in tournaments.iterrows()
-        }
+        groups = {}
+        order = []
+        for _, row in tournaments.iterrows():
+            key = (row['name'], int(row['year']))
+            if key not in groups:
+                groups[key] = []
+                order.append(key)
+            groups[key].append(int(row['id']))
+
+        options = {}
+        for key in order:
+            tours = "+".join(sorted(get_tournament(tid)['tour'] for tid in groups[key]))
+            options[f"{key[0]} ({key[1]}) - {tours}"] = key
         choice = st.sidebar.selectbox("Select tournament", list(options.keys()))
-        selected_id = options[choice]
+        key = options[choice]
+        selected_event = {
+            'name': key[0],
+            'year': key[1],
+            'tournaments': [get_tournament(tid) for tid in groups[key]],
+        }
     else:
         st.sidebar.info("No tournaments yet - create one below.")
 
     with st.sidebar.expander("+ Create tournament"):
         name = st.text_input("Display name", key="new_t_name", placeholder="e.g. Wimbledon 2026")
+        st.caption(
+            "Use the same display name and year for the ATP and WTA editions of "
+            "the same event to combine them into one leaderboard."
+        )
         tour = st.selectbox("Tour", ["ATP", "WTA"], key="new_t_tour")
         slug = st.text_input(
             "Tennis Abstract slug", key="new_t_slug", placeholder="Wimbledon",
@@ -541,7 +571,7 @@ def tournament_section():
                 st.success("Tournament created")
                 st.rerun()
 
-    return selected_id
+    return selected_event
 
 
 def render_picks_tab(tournament, entrants_df, user_id):
@@ -602,27 +632,30 @@ def render_picks_tab(tournament, entrants_df, user_id):
             st.rerun()
 
 
-def render_leaderboard_tab(tournament, user_id):
-    lock_dt = datetime.fromisoformat(tournament['lock_time'])
-    locked = utc_now() > lock_dt
-    st.caption(f"Picks lock {format_utc(lock_dt)} ({format_relative(lock_dt)})")
-
+def render_leaderboard_tab(tournaments, user_id):
+    """tournaments: every tour's tournament for this event (e.g. ATP + WTA),
+    whose points get pooled into one combined leaderboard."""
     _, refresh_col = st.columns([4, 1])
     with refresh_col:
         if st.button("Refresh now"):
             auto_sync.clear()
-            ok, msg, synced_at = auto_sync(tournament['id'])
-            st.toast(f"{msg} - {format_utc(synced_at)}" if ok else msg)
+            for t in tournaments:
+                ok, msg, synced_at = auto_sync(t['id'])
+                st.toast(f"{t['tour']}: {msg}" if ok else f"{t['tour']}: {msg}")
             st.rerun()
 
-    ok, msg, synced_at = auto_sync(tournament['id'])
-    status = msg if ok else f":warning: {msg}"
-    st.caption(
-        f"{status} - last synced {format_utc(synced_at)} ({format_relative(synced_at)}), "
-        "auto-refreshes at most every 10 min"
-    )
+    locked = True
+    for t in tournaments:
+        lock_dt = datetime.fromisoformat(t['lock_time'])
+        locked = locked and utc_now() > lock_dt
+        ok, msg, synced_at = auto_sync(t['id'])
+        status = msg if ok else f":warning: {msg}"
+        st.caption(
+            f"**{t['tour']}** picks lock {format_utc(lock_dt)} ({format_relative(lock_dt)}) - "
+            f"{status}, last synced {format_relative(synced_at)} (auto-refreshes at most every 10 min)"
+        )
 
-    leaderboard, picks_df = get_leaderboard(tournament['id'])
+    leaderboard, picks_df = get_leaderboard([t['id'] for t in tournaments])
     if leaderboard.empty:
         st.info("No picks submitted yet.")
         return
@@ -632,22 +665,25 @@ def render_leaderboard_tab(tournament, user_id):
         hide_index=True, use_container_width=True,
     )
 
+    tour_by_id = {t['id']: t['tour'] for t in tournaments}
     st.markdown("### Pick details")
     for _, row in leaderboard.iterrows():
         is_self = row['user_id'] == user_id
         if not is_self and not locked:
             continue
         with st.expander(f"{row['username']} - {row['points']} pts"):
-            user_picks = picks_df[picks_df['user_id'] == row['user_id']][
-                ['group_name', 'player_name', 'round_label', 'status', 'points']
+            user_picks = picks_df[picks_df['user_id'] == row['user_id']].copy()
+            user_picks['Tour'] = user_picks['tournament_id'].map(tour_by_id)
+            user_picks = user_picks[
+                ['Tour', 'group_name', 'player_name', 'round_label', 'status', 'points']
             ].rename(columns={
                 'group_name': 'Group', 'player_name': 'Player',
                 'round_label': 'Secured Round', 'status': 'Status', 'points': 'Points',
-            }).sort_values('Group')
+            }).sort_values(['Tour', 'Group'])
             st.dataframe(user_picks, hide_index=True, use_container_width=True)
 
     if not locked:
-        st.caption("Other players' pick breakdowns are hidden until picks lock.")
+        st.caption("Other players' pick breakdowns are hidden until all picks lock.")
 
 
 def main():
@@ -663,26 +699,27 @@ def main():
     st.title(":trophy: Trivote Tennis Prediction Game")
 
     login_section()
-    tournament_id = tournament_section()
+    event = tournament_section()
 
-    if tournament_id is None:
+    if event is None:
         st.info("Create a tournament in the sidebar to get started.")
         return
 
-    tournament = get_tournament(tournament_id)
-    st.header(tournament['name'])
+    tournaments = event['tournaments']
+    st.header(f"{event['name']} ({event['year']})")
 
-    try:
-        entrants_df = load_entrants(tournament['tour'], tournament['tournament_slug'], tournament['year'])
-    except Exception as e:
-        st.error(f"Could not load entrants from Tennis Abstract: {e}")
-        return
-
-    tab_picks, tab_leaderboard = st.tabs(["Make Picks", "Leaderboard"])
-    with tab_picks:
-        render_picks_tab(tournament, entrants_df, st.session_state.user_id)
-    with tab_leaderboard:
-        render_leaderboard_tab(tournament, st.session_state.user_id)
+    tab_labels = [f"Make {t['tour']} Picks" for t in tournaments] + ["Leaderboard"]
+    tabs = st.tabs(tab_labels)
+    for tab, tournament in zip(tabs[:-1], tournaments):
+        with tab:
+            try:
+                entrants_df = load_entrants(tournament['tour'], tournament['tournament_slug'], tournament['year'])
+            except Exception as e:
+                st.error(f"Could not load entrants from Tennis Abstract: {e}")
+                continue
+            render_picks_tab(tournament, entrants_df, st.session_state.user_id)
+    with tabs[-1]:
+        render_leaderboard_tab(tournaments, st.session_state.user_id)
 
 
 if __name__ == "__main__":
