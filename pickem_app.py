@@ -515,14 +515,14 @@ def get_leaderboard(tournament_ids):
         GROUP_LEVEL = {'1-2': 0, '3-4': 1, '5-8': 2, '9-16': 3, '17-32': 4, 'Unseeded': 5}
 
         pos_to_group = {
-            int(r['draw_position']): r['seeding_group']
+            int(float(r['draw_position'])): r['seeding_group']
             for _, r in progress_df.iterrows()
-            if str(r.get('draw_position', '')).lstrip('-').isdigit() and int(r['draw_position']) >= 0
+            if str(r.get('draw_position', '')).strip() not in ('', ) and float(r.get('draw_position', -1)) >= 0
         }
 
         player_to_pos = dict(zip(
             progress_df['player_name'],
-            progress_df['draw_position'].astype(int),
+            progress_df['draw_position'].apply(lambda x: int(float(x)) if str(x).strip() not in ('', '-1') else -1),
         ))
 
         player_to_group = dict(zip(
