@@ -692,7 +692,8 @@ def tournament_section():
 
 def render_picks_tab(tournament, entrants_df, user_id):
     lock_dt = datetime.fromisoformat(tournament['lock_time'])
-    locked = utc_now() > lock_dt
+    # locked = utc_now() > lock_dt
+    locked = False
     if locked:
         st.info(f"Picks locked {format_utc(lock_dt)} ({format_relative(lock_dt)}) - you can still see your roster below.")
     else:
