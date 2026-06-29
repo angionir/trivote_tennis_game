@@ -442,8 +442,8 @@ def sync_tournament(tournament_id):
             other_rows = progress_df[~mask]
             existing_map = {
                 r['player_name']: {
-                    'secured_round': int(r['secured_round']),
-                    'draw_position': int(r.get('draw_position', -1)),
+                    'secured_round': int(r['secured_round']) if str(r.get('secured_round', '')).strip().lstrip('-').isdigit() else -1,
+                    'draw_position': int(r['draw_position']) if str(r.get('draw_position', '')).strip().lstrip('-').isdigit() else -1,
                     'seeding_group': r.get('seeding_group', 'Unseeded'),
                 }
                 for _, r in existing_rows.iterrows()
