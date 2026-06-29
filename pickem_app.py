@@ -47,7 +47,7 @@ TABLE_COLUMNS = {
     'users': ['id', 'username', 'created_at'],
     'tournaments': ['id', 'name', 'tour', 'tournament_slug', 'year', 'lock_time', 'created_by', 'created_at'],
     'picks': ['id', 'user_id', 'tournament_id', 'group_name', 'slot_index', 'player_name'],
-    'player_progress': ['tournament_id', 'player_name', 'secured_round', 'eliminated'],
+    'player_progress': ['tournament_id', 'player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group'],
 }
 
 
@@ -375,7 +375,7 @@ def get_all_picks(tournament_id):
 
 def get_player_progress(tournament_id):
     df = _read_table('player_progress')
-    empty = pd.DataFrame(columns=['player_name', 'secured_round', 'eliminated'])
+    empty = pd.DataFrame(columns=['player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group'])
     if df.empty:
         return empty
     df = df[pd.to_numeric(df['tournament_id'], errors='coerce') == int(tournament_id)]
@@ -384,7 +384,7 @@ def get_player_progress(tournament_id):
     df = df.copy()
     df['secured_round'] = pd.to_numeric(df['secured_round']).astype(int)
     df['eliminated'] = pd.to_numeric(df['eliminated']).astype(int)
-    return df[['player_name', 'secured_round', 'eliminated']]
+    return df[['player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group']]
 
 
 # ---------------------------------------------------------------------------
@@ -405,6 +405,8 @@ def sync_tournament(tournament_id):
             tournament=tournament['tournament_slug'],
             year=tournament['year'],
         )
+        df = estimate_seeding_from_ranking(df)
+        df = add_seeding_group(df, 'Seed')
     except Exception as e:
         return False, f"Scrape failed: {e}"
 
@@ -418,14 +420,18 @@ def sync_tournament(tournament_id):
     secured_prefix_idx = ROUND_ORDER.index(cols_present[0])
 
     current_players = {}
-    for _, row in df.iterrows():
+    for draw_pos, (_, row) in enumerate(df.iterrows()):
         player = row['Player']
         secured_idx = secured_prefix_idx - 1
         for i, r in enumerate(ROUND_ORDER):
             col = f'{r}%'
-            if col in df.columns and row[col] >= 99.95:
+            if col in df.columns and row[col] >= 99.99:
                 secured_idx = max(secured_idx, i)
-        current_players[player] = secured_idx
+        current_players[player] = {
+            'secured_idx': secured_idx,
+            'draw_position': draw_pos,
+            'seeding_group': row['Seeding_Group'],
+        }
 
     def mutate(progress_df):
         if progress_df.empty:
@@ -435,26 +441,36 @@ def sync_tournament(tournament_id):
             existing_rows = progress_df[mask]
             other_rows = progress_df[~mask]
             existing_map = {
-                r['player_name']: int(r['secured_round']) for _, r in existing_rows.iterrows()
+                r['player_name']: {
+                    'secured_round': int(r['secured_round']),
+                    'draw_position': int(r.get('draw_position', -1)),
+                    'seeding_group': r.get('seeding_group', 'Unseeded'),
+                }
+                for _, r in existing_rows.iterrows()
             }
 
         new_rows = []
-        for player, secured_idx in current_players.items():
-            # Secured rounds are monotonic - never let a re-scrape walk it back.
-            secured_idx = max(secured_idx, existing_map.get(player, -1))
+        for player, info in current_players.items():
+            prev = existing_map.get(player, {})
+            secured_idx = max(info['secured_idx'], prev.get('secured_round', -1))
             new_rows.append({
-                'tournament_id': int(tournament_id), 'player_name': player,
-                'secured_round': secured_idx, 'eliminated': 0,
+                'tournament_id': int(tournament_id),
+                'player_name': player,
+                'secured_round': secured_idx,
+                'eliminated': 0,
+                'draw_position': info['draw_position'],
+                'seeding_group': info['seeding_group'],
             })
 
-        # Anyone we were tracking who isn't in the table anymore lost the
-        # match they were last shown playing - freeze them at their last
-        # secured round.
-        for player, secured_idx in existing_map.items():
+        for player, info in existing_map.items():
             if player not in current_players:
                 new_rows.append({
-                    'tournament_id': int(tournament_id), 'player_name': player,
-                    'secured_round': secured_idx, 'eliminated': 1,
+                    'tournament_id': int(tournament_id),
+                    'player_name': player,
+                    'secured_round': info['secured_round'],
+                    'eliminated': 1,
+                    'draw_position': info['draw_position'],
+                    'seeding_group': info['seeding_group'],
                 })
 
         new_for_tournament = pd.DataFrame(new_rows, columns=TABLE_COLUMNS['player_progress'])
@@ -496,9 +512,53 @@ def get_leaderboard(tournament_ids):
         picks_df['status'] = picks_df['player_name'].apply(
             lambda p: 'Eliminated' if elim_map.get(p) else ('Active' if p in secured_map else 'Not started')
         )
-        picks_df['points'] = picks_df['secured_round'].apply(
-            lambda i: sum(ROUND_POINTS[r] for r in ROUND_ORDER[:i + 1])
+        GROUP_LEVEL = {'1-2': 0, '3-4': 1, '5-8': 2, '9-16': 3, '17-32': 4, 'Unseeded': 5}
+
+        pos_to_group = {
+            int(r['draw_position']): r['seeding_group']
+            for _, r in progress_df.iterrows()
+            if str(r.get('draw_position', '')).lstrip('-').isdigit() and int(r['draw_position']) >= 0
+        }
+
+        player_to_pos = dict(zip(
+            progress_df['player_name'],
+            progress_df['draw_position'].astype(int),
+        ))
+
+        player_to_group = dict(zip(
+            progress_df['player_name'],
+            progress_df['seeding_group'],
+        ))
+
+        def compute_points(secured_round_idx, player_name, own_group):
+            if secured_round_idx < 0:
+                return 0
+            base = sum(ROUND_POINTS[r] for r in ROUND_ORDER[:secured_round_idx + 1])
+            draw_pos = player_to_pos.get(player_name, -1)
+            if draw_pos < 0:
+                return base
+            bonus = 0
+            own_level = GROUP_LEVEL.get(own_group, 5)
+            for round_idx in range(secured_round_idx + 1):
+                # In a draw listed in order, the opponent in round r is at pos XOR 2^r:
+                # round 0 (R64): flip bit 0 ? adjacent player
+                # round 1 (R32): flip bit 1 ? other pair in group of 4
+                # round 2 (R16): flip bit 2 ? other group of 4 in group of 8, etc.
+                opponent_pos = draw_pos ^ (1 << round_idx)
+                opponent_group = pos_to_group.get(opponent_pos)
+                if opponent_group is not None and GROUP_LEVEL.get(opponent_group, 5) < own_level:
+                    bonus += 1
+            return base + bonus
+
+        picks_df['points'] = picks_df.apply(
+            lambda row: compute_points(
+                row['secured_round'],
+                row['player_name'],
+                player_to_group.get(row['player_name'], row['group_name']),
+            ),
+            axis=1,
         )
+
         all_picks.append(picks_df)
 
     if not all_picks:
