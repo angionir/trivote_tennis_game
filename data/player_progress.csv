@@ -1,132 +1,4 @@
 tournament_id,player_name,secured_round,eliminated,draw_position,seeding_group
-1,(1)Jannik Sinner (ITA),-1,0,0,1-2
-1,(2)Alexander Zverev (GER),-1,0,1,1-2
-1,(3)Felix Auger Aliassime (CAN),-1,0,2,3-4
-1,(4)Ben Shelton (USA),-1,0,3,3-4
-1,(5)Alex De Minaur (AUS),-1,0,4,5-8
-1,(6)Taylor Fritz (USA),-1,0,5,5-8
-1,(7)Novak Djokovic (SRB),-1,0,6,5-8
-1,(8)Daniil Medvedev (RUS),-1,0,7,5-8
-1,(9)Flavio Cobolli (ITA),-1,0,8,9-16
-1,(10)Alexander Bublik (KAZ),-1,0,9,9-16
-1,(11)Casper Ruud (NOR),-1,0,10,9-16
-1,(12)Andrey Rublev (RUS),-1,0,11,9-16
-1,(13)Jiri Lehecka (CZE),-1,0,12,9-16
-1,(14)Luciano Darderi (ITA),-1,0,13,9-16
-1,(15)Jakub Mensik (CZE),-1,0,14,9-16
-1,(16)Learner Tien (USA),-1,0,15,9-16
-1,(17)Frances Tiafoe (USA),-1,0,16,17-32
-1,(18)Francisco Cerundolo (ARG),-1,0,17,17-32
-1,(19)Karen Khachanov (RUS),-1,0,18,17-32
-1,(20)Arthur Fils (FRA),-1,0,19,17-32
-1,(21)Tommy Paul (USA),-1,0,20,17-32
-1,(22)Alejandro Davidovich Fokina (ESP),-1,0,21,17-32
-1,(23)Rafael Jodar (ESP),-1,0,22,17-32
-1,(24)Joao Fonseca (BRA),-1,0,23,17-32
-1,(25)Arthur Rinderknech (FRA),-1,0,24,17-32
-1,(26)Cameron Norrie (GBR),-1,0,25,17-32
-1,(27)Ugo Humbert (FRA),-1,0,26,17-32
-1,(28)Brandon Nakashima (USA),-1,0,27,17-32
-1,(29)Tomas Martin Etcheverry (ARG),-1,0,28,17-32
-1,(30)Alejandro Tabilo (CHI),-1,0,29,17-32
-1,(32)Matteo Arnaldi (ITA),-1,0,30,17-32
-1,Miomir Kecmanovic (SRB),-1,0,31,Unseeded
-1,Marin Cilic (CRO),-1,0,32,Unseeded
-1,Daniel Merida Aguilar (ESP),-1,0,33,Unseeded
-1,Camilo Ugo Carabelli (ARG),-1,0,34,Unseeded
-1,Sebastian Baez (ARG),-1,0,35,Unseeded
-1,Jack Pinnington Jones (GBR),-1,0,36,Unseeded
-1,Jan Lennard Struff (GER),-1,0,37,Unseeded
-1,Martin Landaluce (ESP),-1,0,38,Unseeded
-1,Alexandre Muller (FRA),-1,0,39,Unseeded
-1,Michael Zheng (USA),-1,0,40,Unseeded
-1,Nicolas Mejia (COL),-1,0,41,Unseeded
-1,Thiago Agustin Tirante (ARG),-1,0,42,Unseeded
-1,Juan Manuel Cerundolo (ARG),-1,0,43,Unseeded
-1,Dino Prizmic (CRO),-1,0,44,Unseeded
-1,Adolfo Daniel Vallejo (PAR),-1,0,45,Unseeded
-1,Adam Walton (AUS),-1,0,46,Unseeded
-1,Alexander Shevchenko (KAZ),-1,0,47,Unseeded
-1,Ethan Quinn (USA),-1,0,48,Unseeded
-1,Max Basing (GBR),-1,0,49,Unseeded
-1,Shintaro Mochizuki (JPN),-1,0,50,Unseeded
-1,Pablo Carreno Busta (ESP),-1,0,51,Unseeded
-1,Sebastian Ofner (AUT),-1,0,52,Unseeded
-1,Soon Woo Kwon (KOR),-1,0,53,Unseeded
-1,Hamad Medjedovic (SRB),-1,0,54,Unseeded
-1,Hubert Hurkacz (POL),-1,0,55,Unseeded
-1,Ignacio Buse (PER),-1,0,56,Unseeded
-1,Emilio Nava (USA),-1,0,57,Unseeded
-1,Denis Shapovalov (CAN),-1,0,58,Unseeded
-1,Felix Gill (GBR),-1,0,59,Unseeded
-1,Aleksandar Vukic (AUS),-1,0,60,Unseeded
-1,Jenson Brooksby (USA),-1,0,61,Unseeded
-1,Nuno Borges (POR),-1,0,62,Unseeded
-1,Tristan Boyer (USA),-1,0,63,Unseeded
-1,Yibing Wu (CHN),-1,0,64,Unseeded
-1,Stefanos Tsitsipas (GRE),-1,0,65,Unseeded
-1,Hugo Gaston (FRA),-1,0,66,Unseeded
-1,Martin Damm (USA),-1,0,67,Unseeded
-1,Oliver Tarvet (GBR),-1,0,68,Unseeded
-1,Marco Trungelliti (ARG),-1,0,69,Unseeded
-1,Rinky Hijikata (AUS),-1,0,70,Unseeded
-1,Roberto Bautista Agut (ESP),-1,0,71,Unseeded
-1,Roman Safiullin (RUS),-1,0,72,Unseeded
-1,Aleksandar Kovacevic (USA),-1,0,73,Unseeded
-1,Jesper De Jong (NED),-1,0,74,Unseeded
-1,Botic Van De Zandschulp (NED),-1,0,75,Unseeded
-1,Fabian Marozsan (HUN),-1,0,76,Unseeded
-1,Luca Van Assche (FRA),-1,0,77,Unseeded
-1,Marton Fucsovics (HUN),-1,0,78,Unseeded
-1,Dalibor Svrcina (CZE),-1,0,79,Unseeded
-1,Mariano Navone (ARG),-1,0,80,Unseeded
-1,James Duckworth (AUS),-1,0,81,Unseeded
-1,Tallon Griekspoor (NED),-1,0,82,Unseeded
-1,Giovanni Mpetshi Perricard (FRA),-1,0,83,Unseeded
-1,Grigor Dimitrov (BUL),-1,0,84,Unseeded
-1,Stan Wawrinka (SUI),-1,0,85,Unseeded
-1,Dane Sweeny (AUS),-1,0,86,Unseeded
-1,Toby Samuel (GBR),-1,0,87,Unseeded
-1,Kamil Majchrzak (POL),-1,0,88,Unseeded
-1,Zachary Svajda (USA),-1,0,89,Unseeded
-1,Yannick Hanfmann (GER),-1,0,90,Unseeded
-1,Billy Harris (GBR),-1,0,91,Unseeded
-1,Titouan Droguet (FRA),-1,0,92,Unseeded
-1,Mattia Bellucci (ITA),-1,0,93,Unseeded
-1,Adrian Mannarino (FRA),-1,0,94,Unseeded
-1,Roman Andres Burruchaga (ARG),-1,0,95,Unseeded
-1,Otto Virtanen (FIN),-1,0,96,Unseeded
-1,Arthur Fery (GBR),-1,0,97,Unseeded
-1,Damir Dzumhur (BIH),-1,0,98,Unseeded
-1,Jaime Faria (POR),-1,0,99,Unseeded
-1,Zizou Bergs (BEL),-1,0,100,Unseeded
-1,Sho Shimabukuro (JPN),-1,0,101,Unseeded
-1,Matteo Berrettini (ITA),-1,0,102,Unseeded
-1,Raphael Collignon (BEL),-1,0,103,Unseeded
-1,Lorenzo Sonego (ITA),-1,0,104,Unseeded
-1,Gabriel Diallo (CAN),-1,0,105,Unseeded
-1,Vit Kopriva (CZE),-1,0,106,Unseeded
-1,Terence Atmane (FRA),-1,0,107,Unseeded
-1,Mackenzie Mcdonald (USA),-1,0,108,Unseeded
-1,Benjamin Bonzi (FRA),-1,0,109,Unseeded
-1,Patrick Kypson (USA),-1,0,110,Unseeded
-1,Jack Draper (GBR),-1,0,111,Unseeded
-1,Thanasi Kokkinakis (AUS),-1,0,112,Unseeded
-1,Vilius Gaubas (LTU),-1,0,113,Unseeded
-1,Kyrian Jacquet (FRA),-1,0,114,Unseeded
-1,Jan Choinski (GBR),-1,0,115,Unseeded
-1,Daniel Altmaier (GER),-1,0,116,Unseeded
-1,Alex Michelsen (USA),-1,0,117,Unseeded
-1,Alex Molcan (SVK),-1,0,118,Unseeded
-1,Alexei Popyrin (AUS),-1,0,119,Unseeded
-1,Jaume Munar (ESP),-1,0,120,Unseeded
-1,Jacob Fearnley (GBR),-1,0,121,Unseeded
-1,Corentin Moutet (FRA),-1,0,122,Unseeded
-1,Quentin Halys (FRA),-1,0,123,Unseeded
-1,Marcos Giron (USA),-1,0,124,Unseeded
-1,Valentin Royer (FRA),-1,0,125,Unseeded
-1,Harry Wendelken (GBR),-1,0,126,Unseeded
-1,Alexander Blockx (BEL),-1,0,127,Unseeded
 2,(1)Aryna Sabalenka (BLR),-1,0,0,1-2
 2,(2)Elena Rybakina (KAZ),-1,0,1,1-2
 2,(3)Iga Swiatek (POL),-1,0,2,3-4
@@ -255,3 +127,131 @@ tournament_id,player_name,secured_round,eliminated,draw_position,seeding_group
 2,Elena Gabriela Ruse (ROU),-1,0,125,Unseeded
 2,Caty Mcnally (USA),-1,0,126,Unseeded
 2,Lois Boisson (FRA),-1,0,127,Unseeded
+1,(1)Jannik Sinner (ITA),-1,0,0,1-2
+1,(2)Alexander Zverev (GER),-1,0,1,1-2
+1,(3)Felix Auger Aliassime (CAN),-1,0,2,3-4
+1,(4)Ben Shelton (USA),-1,0,3,3-4
+1,(5)Alex De Minaur (AUS),-1,0,4,5-8
+1,(6)Taylor Fritz (USA),-1,0,5,5-8
+1,(7)Novak Djokovic (SRB),-1,0,6,5-8
+1,(8)Daniil Medvedev (RUS),-1,0,7,5-8
+1,(9)Flavio Cobolli (ITA),-1,0,8,9-16
+1,(10)Alexander Bublik (KAZ),-1,0,9,9-16
+1,(11)Casper Ruud (NOR),-1,0,10,9-16
+1,(12)Andrey Rublev (RUS),-1,0,11,9-16
+1,(13)Jiri Lehecka (CZE),-1,0,12,9-16
+1,(14)Luciano Darderi (ITA),-1,0,13,9-16
+1,(15)Jakub Mensik (CZE),-1,0,14,9-16
+1,(16)Learner Tien (USA),-1,0,15,9-16
+1,(17)Frances Tiafoe (USA),-1,0,16,17-32
+1,(18)Francisco Cerundolo (ARG),-1,0,17,17-32
+1,(19)Karen Khachanov (RUS),-1,0,18,17-32
+1,(20)Arthur Fils (FRA),-1,0,19,17-32
+1,(21)Tommy Paul (USA),-1,0,20,17-32
+1,(22)Alejandro Davidovich Fokina (ESP),-1,0,21,17-32
+1,(23)Rafael Jodar (ESP),-1,0,22,17-32
+1,(24)Joao Fonseca (BRA),-1,0,23,17-32
+1,(25)Arthur Rinderknech (FRA),-1,0,24,17-32
+1,(26)Cameron Norrie (GBR),-1,0,25,17-32
+1,(27)Ugo Humbert (FRA),-1,0,26,17-32
+1,(28)Brandon Nakashima (USA),-1,0,27,17-32
+1,(29)Tomas Martin Etcheverry (ARG),-1,0,28,17-32
+1,(30)Alejandro Tabilo (CHI),-1,0,29,17-32
+1,(32)Matteo Arnaldi (ITA),-1,0,30,17-32
+1,Miomir Kecmanovic (SRB),-1,0,31,Unseeded
+1,Marin Cilic (CRO),-1,0,32,Unseeded
+1,Daniel Merida Aguilar (ESP),-1,0,33,Unseeded
+1,Camilo Ugo Carabelli (ARG),-1,0,34,Unseeded
+1,Sebastian Baez (ARG),-1,0,35,Unseeded
+1,Jack Pinnington Jones (GBR),-1,0,36,Unseeded
+1,Jan Lennard Struff (GER),-1,0,37,Unseeded
+1,Martin Landaluce (ESP),-1,0,38,Unseeded
+1,Alexandre Muller (FRA),-1,0,39,Unseeded
+1,Michael Zheng (USA),-1,0,40,Unseeded
+1,Nicolas Mejia (COL),-1,0,41,Unseeded
+1,Thiago Agustin Tirante (ARG),-1,0,42,Unseeded
+1,Juan Manuel Cerundolo (ARG),-1,0,43,Unseeded
+1,Dino Prizmic (CRO),-1,0,44,Unseeded
+1,Adolfo Daniel Vallejo (PAR),-1,0,45,Unseeded
+1,Adam Walton (AUS),-1,0,46,Unseeded
+1,Alexander Shevchenko (KAZ),-1,0,47,Unseeded
+1,Ethan Quinn (USA),-1,0,48,Unseeded
+1,Max Basing (GBR),-1,0,49,Unseeded
+1,Shintaro Mochizuki (JPN),-1,0,50,Unseeded
+1,Pablo Carreno Busta (ESP),-1,0,51,Unseeded
+1,Sebastian Ofner (AUT),-1,0,52,Unseeded
+1,Soon Woo Kwon (KOR),-1,0,53,Unseeded
+1,Hamad Medjedovic (SRB),-1,0,54,Unseeded
+1,Hubert Hurkacz (POL),-1,0,55,Unseeded
+1,Ignacio Buse (PER),-1,0,56,Unseeded
+1,Emilio Nava (USA),-1,0,57,Unseeded
+1,Denis Shapovalov (CAN),-1,0,58,Unseeded
+1,Felix Gill (GBR),-1,0,59,Unseeded
+1,Aleksandar Vukic (AUS),-1,0,60,Unseeded
+1,Jenson Brooksby (USA),-1,0,61,Unseeded
+1,Nuno Borges (POR),-1,0,62,Unseeded
+1,Tristan Boyer (USA),-1,0,63,Unseeded
+1,Yibing Wu (CHN),-1,0,64,Unseeded
+1,Stefanos Tsitsipas (GRE),-1,0,65,Unseeded
+1,Hugo Gaston (FRA),-1,0,66,Unseeded
+1,Martin Damm (USA),-1,0,67,Unseeded
+1,Oliver Tarvet (GBR),-1,0,68,Unseeded
+1,Marco Trungelliti (ARG),-1,0,69,Unseeded
+1,Rinky Hijikata (AUS),-1,0,70,Unseeded
+1,Roberto Bautista Agut (ESP),-1,0,71,Unseeded
+1,Roman Safiullin (RUS),-1,0,72,Unseeded
+1,Aleksandar Kovacevic (USA),-1,0,73,Unseeded
+1,Jesper De Jong (NED),-1,0,74,Unseeded
+1,Botic Van De Zandschulp (NED),-1,0,75,Unseeded
+1,Fabian Marozsan (HUN),-1,0,76,Unseeded
+1,Luca Van Assche (FRA),-1,0,77,Unseeded
+1,Marton Fucsovics (HUN),-1,0,78,Unseeded
+1,Dalibor Svrcina (CZE),-1,0,79,Unseeded
+1,Mariano Navone (ARG),-1,0,80,Unseeded
+1,James Duckworth (AUS),-1,0,81,Unseeded
+1,Tallon Griekspoor (NED),-1,0,82,Unseeded
+1,Giovanni Mpetshi Perricard (FRA),-1,0,83,Unseeded
+1,Grigor Dimitrov (BUL),-1,0,84,Unseeded
+1,Stan Wawrinka (SUI),-1,0,85,Unseeded
+1,Dane Sweeny (AUS),-1,0,86,Unseeded
+1,Toby Samuel (GBR),-1,0,87,Unseeded
+1,Kamil Majchrzak (POL),-1,0,88,Unseeded
+1,Zachary Svajda (USA),-1,0,89,Unseeded
+1,Yannick Hanfmann (GER),-1,0,90,Unseeded
+1,Billy Harris (GBR),-1,0,91,Unseeded
+1,Titouan Droguet (FRA),-1,0,92,Unseeded
+1,Mattia Bellucci (ITA),-1,0,93,Unseeded
+1,Adrian Mannarino (FRA),-1,0,94,Unseeded
+1,Roman Andres Burruchaga (ARG),-1,0,95,Unseeded
+1,Otto Virtanen (FIN),-1,0,96,Unseeded
+1,Arthur Fery (GBR),-1,0,97,Unseeded
+1,Damir Dzumhur (BIH),-1,0,98,Unseeded
+1,Jaime Faria (POR),-1,0,99,Unseeded
+1,Zizou Bergs (BEL),-1,0,100,Unseeded
+1,Sho Shimabukuro (JPN),-1,0,101,Unseeded
+1,Matteo Berrettini (ITA),-1,0,102,Unseeded
+1,Raphael Collignon (BEL),-1,0,103,Unseeded
+1,Lorenzo Sonego (ITA),-1,0,104,Unseeded
+1,Gabriel Diallo (CAN),-1,0,105,Unseeded
+1,Vit Kopriva (CZE),-1,0,106,Unseeded
+1,Terence Atmane (FRA),-1,0,107,Unseeded
+1,Mackenzie Mcdonald (USA),-1,0,108,Unseeded
+1,Benjamin Bonzi (FRA),-1,0,109,Unseeded
+1,Patrick Kypson (USA),-1,0,110,Unseeded
+1,Jack Draper (GBR),-1,0,111,Unseeded
+1,Thanasi Kokkinakis (AUS),-1,0,112,Unseeded
+1,Vilius Gaubas (LTU),-1,0,113,Unseeded
+1,Kyrian Jacquet (FRA),-1,0,114,Unseeded
+1,Jan Choinski (GBR),-1,0,115,Unseeded
+1,Daniel Altmaier (GER),-1,0,116,Unseeded
+1,Alex Michelsen (USA),-1,0,117,Unseeded
+1,Alex Molcan (SVK),-1,0,118,Unseeded
+1,Alexei Popyrin (AUS),-1,0,119,Unseeded
+1,Jaume Munar (ESP),-1,0,120,Unseeded
+1,Jacob Fearnley (GBR),-1,0,121,Unseeded
+1,Corentin Moutet (FRA),-1,0,122,Unseeded
+1,Quentin Halys (FRA),-1,0,123,Unseeded
+1,Marcos Giron (USA),-1,0,124,Unseeded
+1,Valentin Royer (FRA),-1,0,125,Unseeded
+1,Harry Wendelken (GBR),-1,0,126,Unseeded
+1,Alexander Blockx (BEL),-1,0,127,Unseeded
