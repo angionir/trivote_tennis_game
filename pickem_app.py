@@ -3,15 +3,11 @@ Trivote Tennis Prediction Game - Streamlit App
 
 Casual multiplayer pick'em: people type their name, submit "Seeding Mode"
 picks (one roster of 9 players across seed groups) for a tournament, and
-scores are computed automatically by re-scraping the Tennis Abstract
-forecast page as the real tournament progresses.
+scores are computed automatically by re-scraping the bracket.tennis draw
+page as the real tournament progresses.
 
-Results tracking insight: the forecast page only lists round-probability
-columns for rounds that are still undecided for the players still shown.
-Once a round finishes, the now-secured round's column disappears for
-everyone who survived it, and anyone who lost simply vanishes from the
-table. So a player's furthest secured round can be inferred purely from
-repeated scrapes of that one page - no separate results feed is needed.
+Results tracking: the bracket page lists every match with its winner, so a
+player's furthest secured round is simply the number of matches they have won.
 
 Storage: instead of a real database, this app reads/writes a handful of CSV
 files committed directly into this GitHub repo via the GitHub Contents API.
@@ -28,7 +24,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from forecast_scraper import scrape_tennis_forecast, rearrange_player_name
+from bracket_scraper import scrape_bracket, rearrange_player_name, player_key
 
 ROUND_ORDER = ['R64', 'R32', 'R16', 'QF', 'SF', 'F', 'W']
 ROUND_POINTS = {'R64': 1, 'R32': 1, 'R16': 1, 'QF': 1, 'SF': 2, 'F': 2, 'W': 2}
@@ -47,7 +43,7 @@ TABLE_COLUMNS = {
     'users': ['id', 'username', 'created_at'],
     'tournaments': ['id', 'name', 'tour', 'tournament_slug', 'year', 'lock_time', 'created_by', 'created_at'],
     'picks': ['id', 'user_id', 'tournament_id', 'group_name', 'slot_index', 'player_name'],
-    'player_progress': ['tournament_id', 'player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group'],
+    'player_progress': ['tournament_id', 'player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group', 'bonus'],
 }
 
 
@@ -90,40 +86,33 @@ def format_relative(dt, reference=None):
 # imported directly from another Streamlit script without clashing).
 # ---------------------------------------------------------------------------
 
-def estimate_seeding_from_ranking(df):
-    import re
+GROUP_LEVEL = {'1-2': 0, '3-4': 1, '5-8': 2, '9-16': 3, '17-32': 4, 'Unseeded': 5}
 
-    def extract_rank(player_name):
-        match = re.search(r'\((\d+)\)', player_name)
-        if match:
-            return int(match.group(1))
-        return 999
 
-    df['Estimated_Rank'] = df['Player'].apply(extract_rank)
-    df = df.sort_values('Estimated_Rank')
-    df['Seed'] = df['Estimated_Rank'].apply(lambda x: x if x <= 32 else 999)
-    return df
+def seed_group(seed):
+    if pd.isna(seed) or seed > 32:
+        return 'Unseeded'
+    elif seed <= 2:
+        return '1-2'
+    elif seed <= 4:
+        return '3-4'
+    elif seed <= 8:
+        return '5-8'
+    elif seed <= 16:
+        return '9-16'
+    return '17-32'
 
 
 def add_seeding_group(df, seeding_col='Seed'):
-    def get_group(seed):
-        if pd.isna(seed) or seed > 32:
-            return 'Unseeded'
-        elif seed <= 2:
-            return '1-2'
-        elif seed <= 4:
-            return '3-4'
-        elif seed <= 8:
-            return '5-8'
-        elif seed <= 16:
-            return '9-16'
-        elif seed <= 32:
-            return '17-32'
-        else:
-            return 'Unseeded'
-
-    df['Seeding_Group'] = df[seeding_col].apply(get_group)
+    df['Seeding_Group'] = df[seeding_col].apply(seed_group)
     return df
+
+
+def upset_bonus(own_group, beaten_seeds):
+    """+1 for every opponent actually beaten who sits in a strictly better
+    seeding group than the player's own."""
+    own_level = GROUP_LEVEL[own_group]
+    return sum(1 for seed in beaten_seeds if GROUP_LEVEL[seed_group(seed)] < own_level)
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +364,8 @@ def get_all_picks(tournament_id):
 
 def get_player_progress(tournament_id):
     df = _read_table('player_progress')
-    empty = pd.DataFrame(columns=['player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group'])
+    cols = ['player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group', 'bonus']
+    empty = pd.DataFrame(columns=cols)
     if df.empty:
         return empty
     df = df[pd.to_numeric(df['tournament_id'], errors='coerce') == int(tournament_id)]
@@ -384,7 +374,10 @@ def get_player_progress(tournament_id):
     df = df.copy()
     df['secured_round'] = pd.to_numeric(df['secured_round']).astype(int)
     df['eliminated'] = pd.to_numeric(df['eliminated']).astype(int)
-    return df[['player_name', 'secured_round', 'eliminated', 'draw_position', 'seeding_group']]
+    if 'bonus' not in df.columns:
+        df['bonus'] = 0
+    df['bonus'] = pd.to_numeric(df['bonus'], errors='coerce').fillna(0).astype(int)
+    return df[cols]
 
 
 # ---------------------------------------------------------------------------
@@ -392,7 +385,7 @@ def get_player_progress(tournament_id):
 # ---------------------------------------------------------------------------
 
 def sync_tournament(tournament_id):
-    """Re-scrape the forecast page and update each player's furthest secured
+    """Re-scrape the bracket page and update each player's furthest secured
     round. All player-progress updates for this tournament are batched into
     a single commit, regardless of how many players are in the draw."""
     tournament = get_tournament(tournament_id)
@@ -400,86 +393,49 @@ def sync_tournament(tournament_id):
         return False, "Tournament not found"
 
     try:
-        df = scrape_tennis_forecast(
+        df = scrape_bracket(
             tour=tournament['tour'],
             tournament=tournament['tournament_slug'],
             year=tournament['year'],
         )
-        df = estimate_seeding_from_ranking(df)
         df = add_seeding_group(df, 'Seed')
     except Exception as e:
         return False, f"Scrape failed: {e}"
 
-    cols_present = [r for r in ROUND_ORDER if f'{r}%' in df.columns]
-    if not cols_present:
-        return False, "No round columns found in the forecast table"
-
-    # Every player still listed has already banked every round before the
-    # first column still being shown - that column is the only one left
-    # undecided for them.
-    secured_prefix_idx = ROUND_ORDER.index(cols_present[0])
-
-    current_players = {}
-    for draw_pos, (_, row) in enumerate(df.iterrows()):
-        player = row['Player']
-        secured_idx = secured_prefix_idx - 1
-        for i, r in enumerate(ROUND_ORDER):
-            col = f'{r}%'
-            if col in df.columns and row[col] >= 99.99:
-                secured_idx = max(secured_idx, i)
-        current_players[player] = {
-            'secured_idx': secured_idx,
+    # Every match won banks one round: 1 win = secured R64 (index 0), ...,
+    # 7 wins = won the tournament (index 6).
+    new_rows = [
+        {
+            'tournament_id': int(tournament_id),
+            'player_name': row['Player'],
+            'secured_round': min(int(row['Wins']), len(ROUND_ORDER)) - 1,
+            'eliminated': int(row['Eliminated']),
             'draw_position': draw_pos,
             'seeding_group': row['Seeding_Group'],
+            'bonus': upset_bonus(row['Seeding_Group'], row['BeatenSeeds']),
         }
+        for draw_pos, (_, row) in enumerate(df.iterrows())
+    ]
+
+    new_for_tournament = pd.DataFrame(new_rows, columns=TABLE_COLUMNS['player_progress'])
+
+    # Skip the GitHub commit when nothing changed since the last sync.
+    current = _read_table('player_progress')
+    if not current.empty and 'bonus' in current.columns:
+        mine = current[pd.to_numeric(current['tournament_id'], errors='coerce') == int(tournament_id)]
+        if mine.reset_index(drop=True).equals(new_for_tournament.astype(str).reset_index(drop=True)):
+            return True, f"Synced {len(new_rows)} players (no changes)"
 
     def mutate(progress_df):
         if progress_df.empty:
-            other_rows, existing_map = progress_df, {}
-        else:
-            mask = pd.to_numeric(progress_df['tournament_id'], errors='coerce') == int(tournament_id)
-            existing_rows = progress_df[mask]
-            other_rows = progress_df[~mask]
-            existing_map = {
-                r['player_name']: {
-                    'secured_round': int(r['secured_round']) if str(r.get('secured_round', '')).strip().lstrip('-').isdigit() else -1,
-                    'draw_position': int(r['draw_position']) if str(r.get('draw_position', '')).strip().lstrip('-').isdigit() else -1,
-                    'seeding_group': r.get('seeding_group', 'Unseeded'),
-                }
-                for _, r in existing_rows.iterrows()
-            }
-
-        new_rows = []
-        for player, info in current_players.items():
-            prev = existing_map.get(player, {})
-            secured_idx = max(info['secured_idx'], prev.get('secured_round', -1))
-            new_rows.append({
-                'tournament_id': int(tournament_id),
-                'player_name': player,
-                'secured_round': secured_idx,
-                'eliminated': 0,
-                'draw_position': info['draw_position'],
-                'seeding_group': info['seeding_group'],
-            })
-
-        for player, info in existing_map.items():
-            if player not in current_players:
-                new_rows.append({
-                    'tournament_id': int(tournament_id),
-                    'player_name': player,
-                    'secured_round': info['secured_round'],
-                    'eliminated': 1,
-                    'draw_position': info['draw_position'],
-                    'seeding_group': info['seeding_group'],
-                })
-
-        new_for_tournament = pd.DataFrame(new_rows, columns=TABLE_COLUMNS['player_progress'])
+            return new_for_tournament
+        other_rows = progress_df[pd.to_numeric(progress_df['tournament_id'], errors='coerce') != int(tournament_id)]
         if other_rows.empty:
             return new_for_tournament
         return pd.concat([other_rows, new_for_tournament], ignore_index=True)
 
     _update_table('player_progress', mutate, f"Sync tournament {tournament_id}")
-    return True, f"Synced {len(current_players)} active players"
+    return True, f"Synced {len(new_rows)} players"
 
 
 @st.cache_data(ttl=600)
@@ -502,62 +458,32 @@ def get_leaderboard(tournament_ids):
             continue
 
         progress_df = get_player_progress(tournament_id)
-        secured_map = dict(zip(progress_df['player_name'], progress_df['secured_round']))
-        elim_map = dict(zip(progress_df['player_name'], progress_df['eliminated']))
+        keys = progress_df['player_name'].map(player_key)
+        secured_map = dict(zip(keys, progress_df['secured_round']))
+        elim_map = dict(zip(keys, progress_df['eliminated']))
 
         picks_df = picks_df.copy()
         picks_df['tournament_id'] = tournament_id
-        picks_df['secured_round'] = picks_df['player_name'].map(secured_map).fillna(-1).astype(int)
+        pick_keys = picks_df['player_name'].map(player_key)
+        picks_df['secured_round'] = pick_keys.map(secured_map).fillna(-1).astype(int)
         picks_df['round_label'] = picks_df['secured_round'].apply(lambda i: ROUND_ORDER[i] if i >= 0 else '-')
-        picks_df['status'] = picks_df['player_name'].apply(
-            lambda p: 'Eliminated' if elim_map.get(p) else ('Active' if p in secured_map else 'Not started')
+        # A picked player missing from a synced draw withdrew / was replaced.
+        missing = 'Not in draw' if secured_map else 'Not started'
+        picks_df['status'] = pick_keys.apply(
+            lambda k: 'Eliminated' if elim_map.get(k) else ('Active' if k in secured_map else missing)
         )
-        GROUP_LEVEL = {'1-2': 0, '3-4': 1, '5-8': 2, '9-16': 3, '17-32': 4, 'Unseeded': 5}
+        bonus_map = dict(zip(keys, progress_df['bonus']))
 
-        pos_to_group = {
-            int(float(r['draw_position'])): r['seeding_group']
-            for _, r in progress_df.iterrows()
-            if str(r.get('draw_position', '')).strip() not in ('', ) and float(r.get('draw_position', -1)) >= 0
-        }
-
-        player_to_pos = dict(zip(
-            progress_df['player_name'],
-            progress_df['draw_position'].apply(lambda x: int(float(x)) if str(x).strip() not in ('', '-1') else -1),
-        ))
-
-        player_to_group = dict(zip(
-            progress_df['player_name'],
-            progress_df['seeding_group'],
-        ))
-
-        def compute_points(secured_round_idx, player_name, own_group):
+        def compute_points(secured_round_idx, player_name):
             if secured_round_idx < 0:
                 return 0
             base = sum(ROUND_POINTS[r] for r in ROUND_ORDER[:secured_round_idx + 1])
-            draw_pos = player_to_pos.get(player_name, -1)
-            if draw_pos < 0:
-                return base
-            bonus = 0
-            own_level = GROUP_LEVEL.get(own_group, 5)
-            for round_idx in range(secured_round_idx + 1):
-                # In a draw listed in order, the opponent in round r is at pos XOR 2^r:
-                # round 0 (R64): flip bit 0 ? adjacent player
-                # round 1 (R32): flip bit 1 ? other pair in group of 4
-                # round 2 (R16): flip bit 2 ? other group of 4 in group of 8, etc.
-                opponent_pos = draw_pos ^ (1 << round_idx)
-                opponent_group = pos_to_group.get(opponent_pos)
-                if opponent_group is not None and GROUP_LEVEL.get(opponent_group, 5) < own_level:
-                    bonus += 1
-            return base + bonus
+            return base + bonus_map.get(player_name, 0)
 
-        picks_df['points'] = picks_df.apply(
-            lambda row: compute_points(
-                row['secured_round'],
-                row['player_name'],
-                player_to_group.get(row['player_name'], row['group_name']),
-            ),
-            axis=1,
-        )
+        picks_df['points'] = [
+            compute_points(secured, key)
+            for secured, key in zip(picks_df['secured_round'], pick_keys)
+        ]
 
         all_picks.append(picks_df)
 
@@ -578,8 +504,7 @@ def get_leaderboard(tournament_ids):
 @st.cache_data(ttl=600)
 def load_entrants(tour, slug, year):
     """Entrant list with seed/group only - no probabilities, so picks stay blind."""
-    df = scrape_tennis_forecast(tour=tour, tournament=slug, year=year)
-    df = estimate_seeding_from_ranking(df)
+    df = scrape_bracket(tour=tour, tournament=slug, year=year)
     df = add_seeding_group(df, 'Seed')
     return df[['Player', 'Seed', 'Seeding_Group']].reset_index(drop=True)
 
@@ -669,8 +594,8 @@ def tournament_section():
         name = st.text_input("Display name", key="new_t_name", placeholder="e.g. Wimbledon 2026")
         st.caption("Creates both the ATP and WTA draws for this event, combined into one leaderboard.")
         slug = st.text_input(
-            "Tennis Abstract slug", key="new_t_slug", placeholder="Wimbledon",
-            help="e.g. Wimbledon, RolandGarros, AustralianOpen, USOpen, IndianWells, Rome",
+            "Tournament slug", key="new_t_slug", placeholder="Wimbledon",
+            help="Grand slams: Wimbledon, RolandGarros, AustralianOpen, USOpen (converted to the bracket.tennis URL, e.g. australian-open-2026)",
         )
         year = st.number_input("Year", min_value=2020, max_value=2030, value=utc_now().year, key="new_t_year")
         st.caption(f"Current time is {format_utc(utc_now())} - enter the lock deadline below in UTC too.")
@@ -678,7 +603,7 @@ def tournament_section():
         lock_time = st.time_input("Picks lock time (UTC)", key="new_t_lock_time")
         if st.button("Create tournament"):
             if not name or not slug:
-                st.error("Display name and Tennis Abstract slug are required")
+                st.error("Display name and tournament slug are required")
             else:
                 lock_dt_utc = datetime.combine(lock_date, lock_time, tzinfo=timezone.utc)
                 if create_event(name, slug, int(year), lock_dt_utc, st.session_state.user_id):
@@ -714,14 +639,20 @@ def render_picks_tab(tournament, entrants_df, user_id):
         else:
             group_players = group_players.sort_values('Seed')
         options = group_players['Player'].tolist()
+        # Saved picks keep the name as it was when saved; re-link them to the
+        # current draw by seed-free name (seed may have changed since).
+        current_by_key = {player_key(p): p for p in entrants_df['Player']}
         labels = {p: rearrange_player_name(p) for p in options}
 
         st.markdown(f"**Seeds {group_name}** - pick {num_picks}")
         chosen_for_group = []
         cols = st.columns(num_picks)
         for slot in range(num_picks):
-            default_player = existing_map.get(group_name, {}).get(slot)
+            saved = existing_map.get(group_name, {}).get(slot)
+            default_player = current_by_key.get(player_key(saved)) if saved else None
             available = [p for p in options if p not in all_chosen or p == default_player]
+            if default_player and default_player not in available:
+                available.append(default_player)  # seed moved them to another group
             display_options = ["-"] + available
             default_index = display_options.index(default_player) if default_player in display_options else 0
             with cols[slot]:
@@ -729,7 +660,7 @@ def render_picks_tab(tournament, entrants_df, user_id):
                     f"{group_name} slot {slot + 1}",
                     display_options,
                     index=default_index,
-                    format_func=lambda p: labels.get(p, p),
+                    format_func=lambda p: labels.get(p) or rearrange_player_name(p),
                     key=f"pick_{tournament['id']}_{group_name}_{slot}",
                     disabled=locked,
                 )
@@ -833,7 +764,7 @@ def main():
             try:
                 entrants_df = load_entrants(tournament['tour'], tournament['tournament_slug'], tournament['year'])
             except Exception as e:
-                st.error(f"Could not load entrants from Tennis Abstract: {e}")
+                st.error(f"Could not load entrants from bracket.tennis: {e}")
                 continue
             render_picks_tab(tournament, entrants_df, st.session_state.user_id)
     with tabs[-1]:
